@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { format, isBefore, isToday, parseISO, startOfToday } from 'date-fns';
 import AddTodo from './components/AddTodo';
 import type { Category, Priority, Todo, TodoFilters, TodoStatus } from './types/todo';
@@ -250,12 +250,69 @@ function TodoCard({ todo }: { todo: Todo }) {
   );
 }
 
+function AddTodoDialog({ onClose }: { onClose: () => void }) {
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      aria-labelledby="add-todo-dialog-title"
+      aria-modal="true"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4"
+      role="dialog"
+    >
+      <button
+        aria-label="关闭新增任务"
+        className="absolute inset-0 h-full w-full cursor-default"
+        onClick={onClose}
+        type="button"
+      />
+
+      <div className="relative max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-lg bg-white p-6 shadow-xl">
+        <div className="mb-5 flex items-center justify-between gap-4">
+          <h2 className="text-xl font-semibold text-slate-950" id="add-todo-dialog-title">
+            新增任务
+          </h2>
+          <button
+            aria-label="关闭新增任务"
+            className="flex h-9 w-9 items-center justify-center rounded-md border border-slate-200 bg-white text-xl leading-none text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950 focus:outline-none focus:ring-2 focus:ring-slate-300"
+            onClick={onClose}
+            type="button"
+          >
+            ×
+          </button>
+        </div>
+
+        <AddTodo
+          autoFocusTitle
+          onCancel={onClose}
+          onSuccess={onClose}
+          showTitle={false}
+          variant="plain"
+        />
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const allTodos = useTodoStore(selectTodos);
   const filters = useTodoStore(selectFilters);
   const setFilters = useTodoStore((state) => state.setFilters);
   const todos = useMemo(() => getFilteredTodos(allTodos, filters), [allTodos, filters]);
   const stats = useMemo(() => getTodoStats(allTodos), [allTodos]);
+  const [isAddTodoDialogOpen, setIsAddTodoDialogOpen] = useState(false);
 
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-8 text-slate-950 sm:px-6 lg:px-8">
@@ -293,11 +350,20 @@ function App() {
           </aside>
 
           <section className="grid content-start gap-6">
-            <AddTodo />
-
             <section>
               <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <h2 className="text-xl font-semibold text-slate-950">任务列表</h2>
+                <div className="flex items-center gap-3">
+                  <h2 className="text-xl font-semibold text-slate-950">任务列表</h2>
+                  <button
+                    aria-label="新增任务"
+                    className="flex h-9 w-9 items-center justify-center rounded-md border border-slate-200 bg-white text-2xl leading-none text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950 focus:outline-none focus:ring-2 focus:ring-slate-300"
+                    onClick={() => setIsAddTodoDialogOpen(true)}
+                    title="新增任务"
+                    type="button"
+                  >
+                    +
+                  </button>
+                </div>
                 <input
                   className="h-11 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition focus:border-slate-950 focus:ring-2 focus:ring-slate-200 sm:w-72"
                   onChange={(event) => setFilters({ searchKeyword: event.target.value })}
@@ -323,6 +389,10 @@ function App() {
           </section>
         </div>
       </div>
+
+      {isAddTodoDialogOpen ? (
+        <AddTodoDialog onClose={() => setIsAddTodoDialogOpen(false)} />
+      ) : null}
     </main>
   );
 }

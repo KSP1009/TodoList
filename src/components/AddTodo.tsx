@@ -32,6 +32,14 @@ interface AddTodoFormErrors {
   dueDate?: string;
 }
 
+interface AddTodoProps {
+  autoFocusTitle?: boolean;
+  onCancel?: () => void;
+  onSuccess?: () => void;
+  showTitle?: boolean;
+  variant?: 'card' | 'plain';
+}
+
 const initialFormState: AddTodoFormState = {
   title: '',
   description: '',
@@ -70,7 +78,13 @@ const toCreateTodoInput = (formState: AddTodoFormState): CreateTodoInput => ({
   category: formState.category,
 });
 
-export function AddTodo() {
+export function AddTodo({
+  autoFocusTitle = false,
+  onCancel,
+  onSuccess,
+  showTitle = true,
+  variant = 'card',
+}: AddTodoProps = {}) {
   const addTodo = useTodoStore((state) => state.addTodo);
   const [formState, setFormState] = useState<AddTodoFormState>(initialFormState);
   const [errors, setErrors] = useState<AddTodoFormErrors>({});
@@ -109,17 +123,24 @@ export function AddTodo() {
       priority: formState.priority,
       category: formState.category,
     });
+    onSuccess?.();
   };
 
   return (
     <form
-      className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm"
+      className={
+        variant === 'card'
+          ? 'rounded-lg border border-slate-200 bg-white p-5 shadow-sm'
+          : 'grid gap-5'
+      }
       noValidate
       onSubmit={handleSubmit}
     >
-      <div className="mb-5">
-        <h2 className="text-lg font-semibold text-slate-950">新增任务</h2>
-      </div>
+      {showTitle ? (
+        <div className="mb-5">
+          <h2 className="text-lg font-semibold text-slate-950">新增任务</h2>
+        </div>
+      ) : null}
 
       <div className="grid gap-4">
         <label className="grid gap-2 text-sm font-medium text-slate-700" htmlFor="todo-title">
@@ -127,6 +148,7 @@ export function AddTodo() {
           <input
             aria-describedby={errors.title ? 'todo-title-error' : undefined}
             aria-invalid={Boolean(errors.title)}
+            autoFocus={autoFocusTitle}
             className="h-11 rounded-md border border-slate-300 px-3 text-sm text-slate-950 outline-none transition focus:border-slate-950 focus:ring-2 focus:ring-slate-200"
             id="todo-title"
             maxLength={MAX_TITLE_LENGTH}
@@ -206,7 +228,16 @@ export function AddTodo() {
         </div>
       </div>
 
-      <div className="mt-5 flex justify-end">
+      <div className="flex justify-end gap-3">
+        {onCancel ? (
+          <button
+            className="h-11 rounded-md border border-slate-200 bg-white px-5 text-sm font-medium text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950 focus:outline-none focus:ring-2 focus:ring-slate-300"
+            onClick={onCancel}
+            type="button"
+          >
+            取消
+          </button>
+        ) : null}
         <button
           className="h-11 rounded-md bg-slate-950 px-5 text-sm font-medium text-white transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-300"
           type="submit"
