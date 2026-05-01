@@ -77,6 +77,15 @@ const applyTodoUpdate = (todo: Todo, input: UpdateTodoInput): Todo => {
     return todo;
   }
 
+  const now = new Date().toISOString();
+  const nextStatus = input.status ?? todo.status;
+  const completedAt =
+    nextStatus === 'completed'
+      ? todo.status === 'completed'
+        ? todo.completedAt
+        : now
+      : undefined;
+
   return {
     ...todo,
     title: input.title !== undefined ? input.title.trim() : todo.title,
@@ -85,8 +94,9 @@ const applyTodoUpdate = (todo: Todo, input: UpdateTodoInput): Todo => {
     dueDate: input.dueDate !== undefined ? normalizeOptionalText(input.dueDate) : todo.dueDate,
     priority: input.priority ?? todo.priority,
     category: input.category ?? todo.category,
-    status: input.status ?? todo.status,
-    updatedAt: new Date().toISOString(),
+    status: nextStatus,
+    completedAt,
+    updatedAt: now,
   };
 };
 
@@ -130,15 +140,21 @@ export const useTodoStore = create<TodoStore>((set) => ({
   toggleTodoStatus: (id) => {
     set((state) => ({
       todos: persistTodos(
-        state.todos.map((todo) =>
-          todo.id === id
-            ? {
-                ...todo,
-                status: todo.status === 'completed' ? 'pending' : 'completed',
-                updatedAt: new Date().toISOString(),
-              }
-            : todo,
-        ),
+        state.todos.map((todo) => {
+          if (todo.id !== id) {
+            return todo;
+          }
+
+          const now = new Date().toISOString();
+          const isCompleted = todo.status === 'completed';
+
+          return {
+            ...todo,
+            status: isCompleted ? 'pending' : 'completed',
+            completedAt: isCompleted ? undefined : now,
+            updatedAt: now,
+          };
+        }),
       ),
     }));
   },
@@ -176,14 +192,67 @@ const includesSearchKeyword = (todo: Todo, searchKeyword: string): boolean => {
   );
 };
 
+const priorityRank: Record<Todo['priority'], number> = {
+  high: 0,
+  medium: 1,
+  low: 2,
+};
+
+const statusRank: Record<Todo['status'], number> = {
+  pending: 0,
+  completed: 1,
+};
+
+const getDueDateSortValue = (todo: Todo): number => {
+  if (!todo.dueDate) {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  const timestamp = new Date(todo.dueDate).getTime();
+  return Number.isNaN(timestamp) ? Number.POSITIVE_INFINITY : timestamp;
+};
+
+const getCompletedSortValue = (todo: Todo): number => {
+  const timestamp = new Date(todo.completedAt ?? todo.updatedAt).getTime();
+  return Number.isNaN(timestamp) ? 0 : timestamp;
+};
+
+const compareTodos = (firstTodo: Todo, secondTodo: Todo): number => {
+  const statusComparison = statusRank[firstTodo.status] - statusRank[secondTodo.status];
+
+  if (statusComparison !== 0) {
+    return statusComparison;
+  }
+
+  if (firstTodo.status === 'completed' && secondTodo.status === 'completed') {
+    return getCompletedSortValue(secondTodo) - getCompletedSortValue(firstTodo);
+  }
+
+  const priorityComparison = priorityRank[firstTodo.priority] - priorityRank[secondTodo.priority];
+
+  if (priorityComparison !== 0) {
+    return priorityComparison;
+  }
+
+  const dueDateComparison = getDueDateSortValue(firstTodo) - getDueDateSortValue(secondTodo);
+
+  if (dueDateComparison !== 0) {
+    return dueDateComparison;
+  }
+
+  return new Date(secondTodo.createdAt).getTime() - new Date(firstTodo.createdAt).getTime();
+};
+
 export const getFilteredTodos = (todos: Todo[], filters: TodoFilters): Todo[] =>
-  todos.filter(
-    (todo) =>
-      (filters.category === 'all' || todo.category === filters.category) &&
-      (filters.priority === 'all' || todo.priority === filters.priority) &&
-      (filters.status === 'all' || todo.status === filters.status) &&
-      includesSearchKeyword(todo, filters.searchKeyword),
-  );
+  todos
+    .filter(
+      (todo) =>
+        (filters.category === 'all' || todo.category === filters.category) &&
+        (filters.priority === 'all' || todo.priority === filters.priority) &&
+        (filters.status === 'all' || todo.status === filters.status) &&
+        includesSearchKeyword(todo, filters.searchKeyword),
+    )
+    .sort(compareTodos);
 
 const isSameLocalDate = (value: string, date: Date): boolean => {
   const parsedDate = new Date(value);

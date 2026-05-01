@@ -57,7 +57,8 @@ export const isTodo = (value: unknown): value is Todo => {
     isCategory(value.category) &&
     isTodoStatus(value.status) &&
     isValidDateString(value.createdAt) &&
-    isValidDateString(value.updatedAt)
+    isValidDateString(value.updatedAt) &&
+    (value.completedAt === undefined || isValidDateString(value.completedAt))
   );
 };
 

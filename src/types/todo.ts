@@ -14,6 +14,7 @@ export interface Todo {
   status: TodoStatus;
   createdAt: string;
   updatedAt: string;
+  completedAt?: string;
 }
 
 export interface TodoFilters {

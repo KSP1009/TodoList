@@ -59,6 +59,18 @@ const getDueDateState = (todo: Todo): string => {
   return '';
 };
 
+const getDueDateTone = (dueDateState: string): string => {
+  if (dueDateState === '已逾期') {
+    return 'border-red-200 bg-red-50 text-red-700';
+  }
+
+  if (dueDateState === '今天截止') {
+    return 'border-amber-200 bg-amber-50 text-amber-700';
+  }
+
+  return 'border-slate-200 bg-slate-50 text-slate-600';
+};
+
 const FilterButton = ({
   active,
   children,
@@ -183,10 +195,10 @@ function TodoCard({ todo }: { todo: Todo }) {
 
   return (
     <article className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="flex items-start gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
         <input
           checked={todo.status === 'completed'}
-          className="mt-1 h-5 w-5 rounded border-slate-300 text-slate-950 focus:ring-slate-300"
+          className="mt-1 h-5 w-5 shrink-0 rounded border-slate-300 text-slate-950 focus:ring-slate-300"
           onChange={() => toggleTodoStatus(todo.id)}
           type="checkbox"
         />
@@ -213,32 +225,26 @@ function TodoCard({ todo }: { todo: Todo }) {
               {todo.description}
             </p>
           ) : null}
-
-          {todo.dueDate ? (
-            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-              <span>截止 {formatDueDate(todo.dueDate)}</span>
-              {dueDateState ? (
-                <span
-                  className={`rounded px-2 py-0.5 font-medium ${
-                    dueDateState === '已逾期'
-                      ? 'bg-red-50 text-red-700'
-                      : 'bg-amber-50 text-amber-700'
-                  }`}
-                >
-                  {dueDateState}
-                </span>
-              ) : null}
-            </div>
-          ) : null}
         </div>
 
-        <button
-          className="h-9 rounded-md border border-slate-200 px-3 text-sm font-medium text-slate-500 transition hover:border-red-200 hover:bg-red-50 hover:text-red-700"
-          onClick={() => deleteTodo(todo.id)}
-          type="button"
-        >
-          删除
-        </button>
+        <div className="flex shrink-0 items-center gap-3 self-end sm:self-start">
+          <div
+            className={`rounded-md border px-3 py-2 text-xs font-medium ${
+              todo.dueDate ? getDueDateTone(dueDateState) : 'border-slate-200 bg-white text-slate-400'
+            }`}
+          >
+            <span>{todo.dueDate ? `截止 ${formatDueDate(todo.dueDate)}` : '无截止日期'}</span>
+            {dueDateState ? <span className="ml-2">{dueDateState}</span> : null}
+          </div>
+
+          <button
+            className="h-9 rounded-md border border-slate-200 px-3 text-sm font-medium text-slate-500 transition hover:border-red-200 hover:bg-red-50 hover:text-red-700"
+            onClick={() => deleteTodo(todo.id)}
+            type="button"
+          >
+            删除
+          </button>
+        </div>
       </div>
     </article>
   );
